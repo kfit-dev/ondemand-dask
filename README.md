@@ -114,7 +114,7 @@ This process only need to do once, unless,
 
 # only accept one parameter.
 def post_to_platform(msg: str):
-    # do somethint
+    # do something
 
 ondemand_dask.build_image(
     project = project,
@@ -123,7 +123,7 @@ ondemand_dask.build_image(
     instance_name = instance_name,
     image_name = instance_name,
     webhook_function = post_to_platform
-    # webhook not required
+    # webhook not required, only required if not overwrite `webhook_function`
 )
 
 ```
