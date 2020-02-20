@@ -17,6 +17,7 @@ setuptools.setup(
         'herpetologist',
         'google-cloud-storage',
         'google-api-python-client',
+        'cloudpickle',
     ],
     license = 'MIT',
     classifiers = [

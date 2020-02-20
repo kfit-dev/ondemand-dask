@@ -3,9 +3,11 @@ import googleapiclient.discovery
 import shutil
 import os
 import time
-from function import port_open
+from function import port_open, post_slack
 from herpetologist import check_type
 import subprocess
+import cloudpickle
+from typing import Callable
 
 additional_command = [
     'gsutil cp gs://general-bucket/dask.zip dask.zip',
@@ -35,11 +37,30 @@ def build_image(
     family_vm: str = 'ubuntu-1804-lts',
     storage_image: str = 'asia-southeast1',
     install_bash: str = 'install.sh',
+    webhook_function: Callable = post_slack,
+    **kwargs
 ):
     compute = googleapiclient.discovery.build('compute', 'v1')
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
-    shutil.make_archive('dask', 'zip', 'image')
+
+    if webhook_function.__name__ == 'post_slack':
+
+        def nested_post(msg):
+            return webhook_function(msg, **kwargs)
+
+    else:
+
+        def nested_post(msg):
+            return webhook_function(msg)
+
+    this_dir = os.path.dirname(__file__)
+    pkl = os.path.join(this_dir, 'image', 'dask', 'post_pkl')
+    with open(pkl, 'wb') as fopen:
+        cloudpickle.dump(nested_post, fopen)
+
+    image = os.path.join(this_dir, 'image')
+    shutil.make_archive('dask', 'zip', image)
     blob = bucket.blob('dask.zip')
     os.remove('dask.zip')
     image_response = (

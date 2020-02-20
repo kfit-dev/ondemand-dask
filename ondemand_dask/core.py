@@ -1,33 +1,7 @@
 import googleapiclient.discovery
 import time
-import socket
 from herpetologist import check_type
 from datetime import datetime
-import requests
-
-
-def port_open(ip, port):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.connect((ip, int(port)))
-        s.shutdown(2)
-        return True
-    except:
-        return False
-
-
-def post_slack(
-    slack_msg,
-    webhook,
-    username = 'Dask Alert',
-    icon_url = 'https://avatars3.githubusercontent.com/u/17131925?s=400&v=4',
-):
-    payload = {
-        'text': slack_msg,
-        'username': 'Dask Alert',
-        'icon_url': 'https://avatars3.githubusercontent.com/u/17131925?s=400&v=4',
-    }
-    requests.post(webhook, json = payload)
 
 
 @check_type

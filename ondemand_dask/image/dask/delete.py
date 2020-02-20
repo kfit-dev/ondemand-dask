@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 import time
 import sys
 import requests
+import cloudpickle
+
 
 print(sys.argv)
 name = sys.argv[1]
@@ -12,13 +14,8 @@ zone = sys.argv[3]
 expired = int(sys.argv[4])
 
 
-def post_slack(slack_msg):
-    payload = {
-        'text': slack_msg,
-        'username': 'Dask Alert',
-        'icon_url': 'https://avatars3.githubusercontent.com/u/17131925?s=400&v=4',
-    }
-    requests.post('', json = payload)
+with open('post.pkl', 'rb') as fopen:
+    post_message = cloudpickle.load(fopen)
 
 
 while True:
@@ -36,13 +33,13 @@ while True:
 
     if (datetime.now() - now).seconds > expired:
         slack_msg = """
-            :dask: Gracefully deleted Dask cluster. 
+            Gracefully deleted Dask cluster. 
             *Time shutdown*: {exec_date}
             *Dask cluster name*: {dask_name}
             """.format(
             exec_date = str(datetime.now()), dask_name = name
         )
-        post_slack(slack_msg)
+        post_message(slack_msg)
         compute = googleapiclient.discovery.build('compute', 'v1')
         compute.instances().delete(
             project = project, zone = zone, instance = name

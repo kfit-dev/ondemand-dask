@@ -1,4 +1,5 @@
 import socket
+import requests
 
 
 def port_open(ip, port):
@@ -9,3 +10,17 @@ def port_open(ip, port):
         return True
     except:
         return False
+
+
+def post_slack(
+    slack_msg,
+    webhook,
+    username = 'Dask Alert',
+    icon_url = 'https://avatars3.githubusercontent.com/u/17131925?s=400&v=4',
+):
+    payload = {
+        'text': slack_msg,
+        'username': 'Dask Alert',
+        'icon_url': 'https://avatars3.githubusercontent.com/u/17131925?s=400&v=4',
+    }
+    requests.post(webhook, json = payload)

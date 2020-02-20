@@ -220,7 +220,7 @@ def spawn_dask(
 
     if post_to_slack:
         slack_msg = """
-            :dask: Spawned Dask cluster. 
+            Spawned Dask cluster. 
             *Time spawn*: {exec_date}
             *Dask cluster name*: {dask_name}
             *CPU Core*: {cpu}
