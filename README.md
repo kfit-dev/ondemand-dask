@@ -1,6 +1,6 @@
 <p align="center">
     <a href="#readme">
-        <img alt="logo" width="40%" src="dask.png">
+        <img alt="logo" width="20%" src="dask.png">
     </a>
 </p>
 
