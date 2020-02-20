@@ -78,7 +78,7 @@ def build_image(
     webhook_function: Callable, (default=post_slack)
         Callable function to send alert, default is post_slack.
     **kwargs:
-        Keyword arguments to pass to callback.
+        Keyword arguments to pass to webhook_function.
     """
 
 ```
@@ -127,4 +127,51 @@ ondemand_dask.build_image(
     # webhook not required, only required if not overwrite `webhook_function`
 )
 
+```
+
+#### ondemand_dask.spawn
+
+```python
+def spawn(
+    cluster_name: str,
+    image_name: str,
+    project: str,
+    cpu: int,
+    ram: int,
+    zone: str,
+    worker_size: int,
+    check_exist: bool = True,
+    graceful_delete: int = 180,
+    webhook_function: Callable = post_slack,
+    **kwargs
+):
+    """
+    function to spawn a dask cluster.
+
+    parameter
+    ---------
+
+    cluster_name: str
+        dask cluster name.
+    image_name: str
+        image name we built.
+    project: str
+        project id inside gcp.
+    cpu: int
+        cpu core count.
+    ram: int
+        ram size in term of MB.
+    zone: str
+        compute zone for the cluster.
+    worker_size: int
+        worker size of dask cluster, good value should be worker size = 2 * cpu core.
+    check_exist: bool, (default=True)
+        if True, will check the cluster exist. If exist, will return ip address.
+    graceful_delete: int, (default=180)
+        Dask will automatically delete itself if no process after graceful_delete (seconds).
+    webhook_function: Callable, (default=post_slack)
+        Callable function to send alert, default is post_slack.
+    **kwargs:
+        Keyword arguments to pass to webhook_function.
+    """
 ```

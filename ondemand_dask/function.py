@@ -14,9 +14,10 @@ def port_open(ip, port):
 
 def post_slack(
     slack_msg,
-    webhook,
+    webhook = None,
     username = 'Dask Alert',
     icon_url = 'https://avatars3.githubusercontent.com/u/17131925?s=400&v=4',
+    **kwargs
 ):
     payload = {
         'text': slack_msg,

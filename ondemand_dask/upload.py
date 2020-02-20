@@ -60,7 +60,7 @@ def build_image(
     webhook_function: Callable, (default=post_slack)
         Callable function to send alert, default is post_slack.
     **kwargs:
-        Keyword arguments to pass to callback.
+        Keyword arguments to pass to webhook_function.
     """
 
     compute = googleapiclient.discovery.build('compute', 'v1')
