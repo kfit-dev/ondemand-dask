@@ -11,7 +11,7 @@ setuptools.setup(
     description = 'Dask cluster on demand and automatically delete itself after expired. Only support GCP for now.',
     author = 'huseinzol05',
     author_email = 'husein.zol05@gmail.com',
-    url = 'https://github.com/huseinzol05/https://github.com/huseinzol05/ondemand-dask',
+    url = 'https://github.com/kfit-dev/ondemand-dask',
     install_requires = [
         'requests',
         'herpetologist',
