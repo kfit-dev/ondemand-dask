@@ -2,6 +2,7 @@ import googleapiclient.discovery
 import time
 from herpetologist import check_type
 from datetime import datetime
+from .function import port_open, post_slack
 
 
 @check_type

@@ -7,3 +7,4 @@ healer/__pycache__
 *.DS_Store
 *Untitled*.ipynb
 test.ipynb
+*post.pkl

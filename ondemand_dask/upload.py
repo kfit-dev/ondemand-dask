@@ -3,7 +3,7 @@ import googleapiclient.discovery
 import shutil
 import os
 import time
-from function import port_open, post_slack
+from .function import port_open, post_slack
 from herpetologist import check_type
 import subprocess
 import cloudpickle
@@ -36,10 +36,33 @@ def build_image(
     project_vm: str = 'ubuntu-os-cloud',
     family_vm: str = 'ubuntu-1804-lts',
     storage_image: str = 'asia-southeast1',
-    install_bash: str = 'install.sh',
     webhook_function: Callable = post_slack,
+    install_bash: str = None,
     **kwargs
 ):
+    """
+    Parameters
+    ----------
+
+    project: str
+        project id
+    zone: str
+    bucket_name: str
+        bucket name to upload dask code, can be private.
+    image_name: str
+        image name for dask bootloader.
+    project_vm: str, (default='ubuntu-os-cloud')
+        project name for vm. 
+    family_vm: str, (default='ubuntu-1804-lts')
+        family name for vm.
+    storage_image: str, (default='asia-southeast1')
+        storage location for dask image.
+    webhook_function: Callable, (default=post_slack)
+        Callable function to send alert, default is post_slack.
+    **kwargs:
+        Keyword arguments to pass to callback.
+    """
+
     compute = googleapiclient.discovery.build('compute', 'v1')
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
@@ -55,7 +78,7 @@ def build_image(
             return webhook_function(msg)
 
     this_dir = os.path.dirname(__file__)
-    pkl = os.path.join(this_dir, 'image', 'dask', 'post_pkl')
+    pkl = os.path.join(this_dir, 'image', 'dask', 'post.pkl')
     with open(pkl, 'wb') as fopen:
         cloudpickle.dump(nested_post, fopen)
 
@@ -65,7 +88,7 @@ def build_image(
     os.remove('dask.zip')
     image_response = (
         compute.images()
-        .getFromFamily(project = args.project_vm, family = args.family_vm)
+        .getFromFamily(project = project_vm, family = family_vm)
         .execute()
     )
     source_disk_image = image_response['selfLink']
@@ -80,6 +103,10 @@ def build_image(
         print('`dask-network` exists.')
 
     machine_type = 'zones/%s/machineTypes/n1-standard-1' % zone
+
+    if install_bash is None:
+        install_bash = 'install.sh'
+        install_bash = os.path.join(this_dir, install_bash)
 
     startup_script = open(install_bash).read()
     startup_script = '\n'.join(
@@ -154,7 +181,7 @@ def build_image(
             compute.instances().list(project = project, zone = zone).execute()
         )
         results = result['items'] if 'items' in result else None
-        dask = [r for r in results if r['name'] == args.name]
+        dask = [r for r in results if r['name'] == instance_name]
         if len(dask) > 0:
             dask = dask[0]
             ip_address = dask['networkInterfaces'][0]['accessConfigs'][0][
@@ -175,7 +202,7 @@ def build_image(
     compute = googleapiclient.discovery.build('compute', 'v1')
     print('Deleting image `%s` if exists.' % (image_name))
     try:
-        compute.images().delete(project = project, image = image_name)
+        compute.images().delete(project = project, image = image_name).execute()
         print('Done.')
     except:
         pass
@@ -209,7 +236,7 @@ def build_image(
     print('Deleting instance `%s`.' % (instance_name))
     compute = googleapiclient.discovery.build('compute', 'v1')
     compute.instances().delete(
-        project = project, zone = zone, instance = name
+        project = project, zone = zone, instance = instance_name
     ).execute()
     print('Done.')
     return True
