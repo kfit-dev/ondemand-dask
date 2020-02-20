@@ -38,9 +38,10 @@ Simply check notebooks in [example](example).
 
 ## usage
 
-#### ondemand_dask.build_image
+1. Build image, this process only need to be done once, [ondemand_dask.build_image](https://github.com/kfit-dev/ondemand-dask#ondemand_daskbuild_image)
+2. Spawn a cluster, [ondemand_dask.spawn](#)
 
-**Before able to use on demand dask, you need to build the image first.**
+#### ondemand_dask.build_image
 
 ```python
 
