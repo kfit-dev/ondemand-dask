@@ -22,6 +22,16 @@ It also support simple alert system to post message during spawning and graceful
 pip install ondemand-dask
 ```
 
+## Before use
+
+**Make sure your machine already installed gcloud SDK and your GCP account powerful enough to spawn compute engine and upload to google storage**.
+
+If not, simply download gcloud SDK, https://cloud.google.com/sdk/docs/downloads-versioned-archives, after that,
+
+```bash
+gcloud init
+```
+
 ## examples
 
 Simply check notebooks in [example](example).
