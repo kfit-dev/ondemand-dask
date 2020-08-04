@@ -6,8 +6,8 @@ __packagename__ = 'ondemand-dask'
 setuptools.setup(
     name = __packagename__,
     packages = setuptools.find_packages(),
-    version = '0.0.1',
-    python_requires = '>=3.7.*',
+    version = '0.0.7',
+    python_requires = '>=3.6.*',
     description = 'Dask cluster on demand and automatically delete itself after expired. Only support GCP for now.',
     author = 'huseinzol05',
     author_email = 'husein.zol05@gmail.com',

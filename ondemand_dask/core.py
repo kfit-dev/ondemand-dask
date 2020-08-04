@@ -2,7 +2,7 @@ import googleapiclient.discovery
 import time
 from herpetologist import check_type
 from datetime import datetime
-from .function import port_open, post_slack
+from .function import port_open, post_slack, wait_for_operation
 from typing import Callable
 
 
@@ -23,11 +23,13 @@ def delete(cluster_name: str, project: str, zone: str):
     """
 
     compute = googleapiclient.discovery.build('compute', 'v1')
-    return (
+    operation = (
         compute.instances()
         .delete(project = project, zone = zone, instance = cluster_name)
         .execute()
     )
+    wait_for_operation(compute, project, zone, operation['name'])
+    return True
 
 
 @check_type
@@ -35,14 +37,16 @@ def spawn(
     cluster_name: str,
     image_name: str,
     project: str,
+    zone: str,
     cpu: int,
     ram: int,
-    zone: str,
     worker_size: int,
+    disk_size: int = 10,
     check_exist: bool = True,
+    preemptible: bool = False,
     graceful_delete: int = 180,
     webhook_function: Callable = post_slack,
-    **kwargs
+    **kwargs,
 ):
     """
     function to spawn a dask cluster.
@@ -56,23 +60,49 @@ def spawn(
         image name we built.
     project: str
         project id inside gcp.
+    zone: str
+        compute zone for the cluster.
     cpu: int
         cpu core count.
     ram: int
         ram size in term of MB.
-    zone: str
-        compute zone for the cluster.
     worker_size: int
         worker size of dask cluster, good value should be worker size = 2 * cpu core.
+    disk_size: int, (default=10)
+        Disk size (GB) for the dask cluster.
     check_exist: bool, (default=True)
         if True, will check the cluster exist. If exist, will return ip address.
+    preemptible: bool, (default=False)
+        if True, will use preemptible VM, low cost and short life span. 
+        Read more, https://cloud.google.com/compute/docs/instances/preemptible
     graceful_delete: int, (default=180)
         Dask will automatically delete itself if no process after graceful_delete (seconds).
     webhook_function: Callable, (default=post_slack)
         Callable function to send alert, default is post_slack.
     **kwargs:
         Keyword arguments to pass to webhook_function.
+
+    Returns
+    -------
+    dictionary: {'ip': ip_address, 'internal_ip': internal_ip}
     """
+
+    if cpu < 1:
+        raise Exception('cpu must be bigger than 0')
+    if ram % 256 != 0:
+        raise Exception('ram must be divisible by 256')
+    if worker_size < 1:
+        raise Exception('worker_size must be bigger than 0')
+
+    if webhook_function.__name__ == 'post_slack':
+
+        def nested_post(msg):
+            return webhook_function(msg, **kwargs)
+
+    else:
+
+        def nested_post(msg):
+            return webhook_function(msg)
 
     compute = googleapiclient.discovery.build('compute', 'v1')
     ip_address, internal_ip = None, None
@@ -100,16 +130,9 @@ def spawn(
         )
 
         source_disk_image = image_response['selfLink']
-        machine_type = 'zones/%s/machineTypes/custom-%d-%d-ext' % (
-            zone,
-            cpu,
-            ram,
-        )
+        machine_type = f'zones/{zone}/machineTypes/custom-{cpu}-{ram}-ext'
 
-        startup_script = (
-            'worker_size=%d name=%s project=%s zone=%s expired=%d docker-compose -f docker-compose.yaml up --build'
-            % (worker_size, cluster_name, project, zone, graceful_delete)
-        )
+        startup_script = f'worker_size={worker_size} name={cluster_name} project={project} zone={zone} expired={graceful_delete} docker-compose -f docker-compose.yaml up --build'
 
         config = {
             'name': cluster_name,
@@ -119,6 +142,7 @@ def spawn(
                 {
                     'boot': True,
                     'autoDelete': True,
+                    'diskSizeGb': disk_size,
                     'initializeParams': {'sourceImage': source_disk_image},
                 }
             ],
@@ -145,13 +169,16 @@ def spawn(
             },
         }
 
+        if preemptible:
+            config['scheduling'] = {'preemptible': True}
+
         operation = (
             compute.instances()
             .insert(project = project, zone = zone, body = config)
             .execute()
         )
 
-        print('Waiting instance `%s` to run.' % (cluster_name))
+        print(f'Waiting instance `{cluster_name}` to run.')
 
         while True:
             result = (
@@ -200,23 +227,22 @@ def spawn(
                 break
             time.sleep(5)
 
-    if webhook_function:
-        slack_msg = """
-            Spawned Dask cluster. 
-            *Time spawn*: {exec_date}
-            *Dask cluster name*: {dask_name}
-            *CPU Core*: {cpu}
-            *RAM (MB)*: {ram}
-            *Worker count*: {worker_size}
-            *Dask Dasboard Url*: http://{dask_ip}:8787
-            """.format(
-            exec_date = str(datetime.now()),
-            dask_name = cluster_name,
-            dask_ip = ip_address,
-            cpu = cpu,
-            ram = ram,
-            worker_size = worker_size,
-        )
-        webhook_function(slack_msg, **kwargs)
+    slack_msg = """
+        Spawned Dask cluster. 
+        *Time spawn*: {exec_date}
+        *Dask cluster name*: {dask_name}
+        *CPU Core*: {cpu}
+        *RAM (MB)*: {ram}
+        *Worker count*: {worker_size}
+        *Dask Dasboard Url*: http://{dask_ip}:8787
+        """.format(
+        exec_date = str(datetime.now()),
+        dask_name = cluster_name,
+        dask_ip = ip_address,
+        cpu = cpu,
+        ram = ram,
+        worker_size = worker_size,
+    )
+    nested_post(slack_msg)
 
     return {'ip': ip_address, 'internal_ip': internal_ip}

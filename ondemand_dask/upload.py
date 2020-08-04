@@ -4,10 +4,12 @@ import shutil
 import os
 import time
 from .function import port_open, post_slack
+from .libraries import extra_libraries, important_libraries
 from herpetologist import check_type
 import subprocess
 import cloudpickle
-from typing import Callable
+from typing import Callable, List
+
 
 additional_command = [
     'gsutil cp gs://general-bucket/dask.zip dask.zip',
@@ -37,8 +39,10 @@ def build_image(
     family_vm: str = 'ubuntu-1804-lts',
     storage_image: str = 'asia-southeast1',
     webhook_function: Callable = post_slack,
+    validate_webhook: bool = True,
+    additional_libraries: List[str] = extra_libraries,
     install_bash: str = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Parameters
@@ -58,33 +62,43 @@ def build_image(
     storage_image: str, (default='asia-southeast1')
         storage location for dask image.
     webhook_function: Callable, (default=post_slack)
-        Callable function to send alert, default is post_slack.
+        Callable function to send alert during gracefully delete, default is post_slack.
+    validate_webhook: bool, (default=True)
+        if True, will validate `webhook_function`. 
+        Not suggest to set it as False because this webhook_function will use during gracefully delete.
+    additional_libraries: List[str], (default=extra_libraries). 
+        add more libraries from PYPI. This is necessary if want dask cluster able to necessary libraries.
     **kwargs:
         Keyword arguments to pass to webhook_function.
     """
 
+    def nested_post(msg):
+        return webhook_function(msg, **kwargs)
+
+    if validate_webhook:
+        if nested_post('Testing from ondemand-dask') != 200:
+            raise Exception('`webhook_function` must returned 200.')
+
     compute = googleapiclient.discovery.build('compute', 'v1')
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
-
-    if webhook_function.__name__ == 'post_slack':
-
-        def nested_post(msg):
-            return webhook_function(msg, **kwargs)
-
-    else:
-
-        def nested_post(msg):
-            return webhook_function(msg)
 
     this_dir = os.path.dirname(__file__)
     pkl = os.path.join(this_dir, 'image', 'dask', 'post.pkl')
     with open(pkl, 'wb') as fopen:
         cloudpickle.dump(nested_post, fopen)
 
+    reqs = important_libraries + additional_libraries
+    reqs = list(set(reqs))
+
+    req = os.path.join(this_dir, 'image', 'dask', 'requirements.txt')
+    with open(req, 'w') as fopen:
+        fopen.write('\n'.join(reqs))
+
     image = os.path.join(this_dir, 'image')
     shutil.make_archive('dask', 'zip', image)
     blob = bucket.blob('dask.zip')
+    blob.upload_from_filename('dask.zip')
     os.remove('dask.zip')
     image_response = (
         compute.images()
@@ -102,7 +116,7 @@ def build_image(
     except:
         print('`dask-network` exists.')
 
-    machine_type = 'zones/%s/machineTypes/n1-standard-1' % zone
+    machine_type = f'zones/{zone}/machineTypes/n1-standard-1'
 
     if install_bash is None:
         install_bash = 'install.sh'
@@ -156,7 +170,7 @@ def build_image(
         .execute()
     )
 
-    print('Waiting instance `%s` to run.' % (instance_name))
+    print(f'Waiting instance `{instance_name}` to run.')
 
     while True:
         result = (
@@ -187,7 +201,7 @@ def build_image(
             ip_address = dask['networkInterfaces'][0]['accessConfigs'][0][
                 'natIP'
             ]
-            print('Got it, Public IP: %s' % (ip_address))
+            print(f'Got it, Public IP: {ip_address}')
             break
 
         time.sleep(2)
@@ -200,14 +214,17 @@ def build_image(
         time.sleep(5)
 
     compute = googleapiclient.discovery.build('compute', 'v1')
-    print('Deleting image `%s` if exists.' % (image_name))
+    print(f'Deleting image `{image_name}` if exists.')
     try:
         compute.images().delete(project = project, image = image_name).execute()
         print('Done.')
     except:
         pass
 
-    print('Building image `%s`.' % (image_name))
+    # give a rest to gcp API before build the image.
+    time.sleep(20)
+
+    print(f'Building image `{image_name}`.')
     try:
         o = subprocess.check_output(
             [
@@ -233,7 +250,7 @@ def build_image(
         print(e.output.decode('utf-8'))
         raise
 
-    print('Deleting instance `%s`.' % (instance_name))
+    print(f'Deleting instance `{instance_name}`.')
     compute = googleapiclient.discovery.build('compute', 'v1')
     compute.instances().delete(
         project = project, zone = zone, instance = instance_name
