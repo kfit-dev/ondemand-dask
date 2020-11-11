@@ -6,6 +6,7 @@ __packagename__ = 'ondemand-dask'
 setuptools.setup(
     name = __packagename__,
     packages = setuptools.find_packages(),
+    include_package_data = True,
     version = '0.0.7',
     python_requires = '>=3.6.*',
     description = 'Dask cluster on demand and automatically delete itself after expired. Only support GCP for now.',
@@ -26,5 +27,4 @@ setuptools.setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    package_data = {'ondemand_dask': ['image', 'install.sh']},
 )
