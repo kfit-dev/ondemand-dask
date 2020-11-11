@@ -42,6 +42,7 @@ def build_image(
     validate_webhook: bool = True,
     additional_libraries: List[str] = extra_libraries,
     install_bash: str = None,
+    dockerfile: str = None,
     **kwargs,
 ):
     """
@@ -68,6 +69,10 @@ def build_image(
         Not suggest to set it as False because this webhook_function will use during gracefully delete.
     additional_libraries: List[str], (default=extra_libraries). 
         add more libraries from PYPI. This is necessary if want dask cluster able to necessary libraries.
+    install_bash: str, (default=None). 
+        File path to custom start-up script to build disk image
+    dockerfile: List[str], (default=None). 
+        File path to custom Dockerfile to build docker image
     **kwargs:
         Keyword arguments to pass to webhook_function.
     """
@@ -126,6 +131,13 @@ def build_image(
     startup_script = '\n'.join(
         startup_script.split('\n') + additional_command
     ).replace('general-bucket', bucket_name)
+
+    if dockerfile:
+        with open(dockerfile, 'r') as fopen:
+            script = fopen.read()
+        dockerfile_path = os.path.join(this_dir, 'image', 'dask', 'Dockerfile')
+        with open(dockerfile_path, 'w') as fopen:
+            fopen.write(script)
 
     config = {
         'name': instance_name,
