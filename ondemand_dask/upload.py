@@ -33,10 +33,13 @@ def build_image(
     project: str,
     zone: str,
     bucket_name: str,
-    instance_name: str,
     image_name: str,
-    project_vm: str = 'ubuntu-os-cloud',
-    family_vm: str = 'ubuntu-1804-lts',
+    family: str,
+    instance_name: str = 'build-dask-instance',
+    source_image: dict = {
+        'project': 'ubuntu-os-cloud',
+        'family': 'ubuntu-1804-lts',
+    },
     storage_image: str = 'asia-southeast1',
     webhook_function: Callable = post_slack,
     validate_webhook: bool = True,
@@ -56,10 +59,12 @@ def build_image(
         bucket name to upload dask code, can be private.
     image_name: str
         image name for dask bootloader.
-    project_vm: str, (default='ubuntu-os-cloud')
-        project name for vm. 
-    family_vm: str, (default='ubuntu-1804-lts')
-        family name for vm.
+    family: str
+        family name for built image
+    instance_name: str (default='build-dask-instance')
+        Start-up instance to build the image
+    source_image: dict (default={'project': 'ubuntu-os-cloud', 'family': 'ubuntu-1804-lts'})
+        Source image to start the instance for building the image
     storage_image: str, (default='asia-southeast1')
         storage location for dask image.
     webhook_function: Callable, (default=post_slack)
@@ -107,7 +112,7 @@ def build_image(
     os.remove('dask.zip')
     image_response = (
         compute.images()
-        .getFromFamily(project = project_vm, family = family_vm)
+        .getFromFamily(**source_image)
         .execute()
     )
     source_disk_image = image_response['selfLink']
@@ -250,7 +255,7 @@ def build_image(
                 '--source-disk-zone',
                 zone,
                 '--family',
-                family_vm,
+                family,
                 '--storage-location',
                 storage_image,
                 '--force',
