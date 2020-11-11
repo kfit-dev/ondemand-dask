@@ -1,8 +1,6 @@
 important_libraries = [
-    'dask[complete]==2.21.0',
-    'distributed==2.21.0',
-    'cloudpickle==1.5.0',
-    'msgpack==1.0.0',
+    'dask[complete]',
+    'distributed',
     'ondemand-dask',
     'google-api-python-client',
     'jupyter-server-proxy',
