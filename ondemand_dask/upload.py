@@ -105,6 +105,13 @@ def build_image(
     with open(req, 'w') as fopen:
         fopen.write('\n'.join(reqs))
 
+    if dockerfile:
+        with open(dockerfile, 'r') as fopen:
+            script = fopen.read()
+        dockerfile_path = os.path.join(this_dir, 'image', 'dask', 'Dockerfile')
+        with open(dockerfile_path, 'w') as fopen:
+            fopen.write(script)
+
     image = os.path.join(this_dir, 'image')
     shutil.make_archive('dask', 'zip', image)
     blob = bucket.blob('dask.zip')
@@ -137,12 +144,7 @@ def build_image(
         startup_script.split('\n') + additional_command
     ).replace('general-bucket', bucket_name)
 
-    if dockerfile:
-        with open(dockerfile, 'r') as fopen:
-            script = fopen.read()
-        dockerfile_path = os.path.join(this_dir, 'image', 'dask', 'Dockerfile')
-        with open(dockerfile_path, 'w') as fopen:
-            fopen.write(script)
+
 
     config = {
         'name': instance_name,
