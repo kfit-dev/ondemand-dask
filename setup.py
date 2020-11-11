@@ -7,7 +7,7 @@ setuptools.setup(
     name = __packagename__,
     packages = setuptools.find_packages(),
     include_package_data = True,
-    version = '0.0.8',
+    version = '0.0.9',
     python_requires = '>=3.6.*',
     description = 'Dask cluster on demand and automatically delete itself after expired. Only support GCP for now.',
     author = 'huseinzol05',
